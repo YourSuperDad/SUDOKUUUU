@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Sudoku Maven</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: #0f1019;
+        color: #fff;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .app {
+        width: 100%;
+        max-width: 420px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+      }
+
+      h1 {
+        color: #a99bf5;
+        font-size: 1.9rem;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        text-align: center;
+      }
+
+      /* ---------- BOARD ---------- */
+      .board {
+        width: 100%;
+        aspect-ratio: 1/1;
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        grid-template-rows: repeat(9, 1fr);
+        background: #1a1c2a;
+        border: 2px solid #3d4159;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .cell {
+        position: relative;
+        border-right: 1px solid #1a1c2a;
+        border-bottom: 1px solid #1a1c2a;
+        background: #2a2d3e;
+      }
+      .cell:nth-child(9n) {
+        border-right: none;
+      }
+      .cell:nth-child(n + 73) {
+        border-bottom: none;
+      }
+      .cell:nth-child(9n + 3),
+      .cell:nth-child(9n + 6) {
+        border-right: 2px solid #3d4159;
+      }
+      .cell:nth-child(n + 19):nth-child(-n + 27),
+      .cell:nth-child(n + 46):nth-child(-n + 54) {
+        border-bottom: 2px solid #3d4159;
+      }
+
+      .cell input {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: #fff;
+        text-align: center;
+        font-family: inherit;
+        font-size: clamp(1rem, 5vw, 1.35rem);
+        font-weight: 600;
+        caret-color: #a99bf5;
+        -webkit-appearance: none;
+        appearance: none;
+        transition:
+          background 0.15s,
+          color 0.15s;
+      }
+      .cell input:focus {
+        background: rgba(169, 155, 245, 0.22);
+      }
+      .cell input.solved {
+        color: #7ee0a4;
+      }
+
+      /* ---------- STATUS ---------- */
+      .status {
+        min-height: 1.2em;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #ef4444;
+        text-align: center;
+      }
+      .status.success {
+        color: #7ee0a4;
+      }
+
+      /* ---------- BUTTONS ---------- */
+      .controls {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+      }
+      .btn {
+        flex: 1;
+        padding: 12px 18px;
+        border-radius: 999px;
+        border: 2px solid #6c5ce7;
+        background: transparent;
+        color: #c4b5fd;
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition:
+          transform 0.12s,
+          background 0.2s,
+          color 0.2s;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .btn:hover {
+        background: rgba(108, 92, 231, 0.14);
+      }
+      .btn:active {
+        transform: scale(0.97);
+      }
+      .btn.primary {
+        background: #6c5ce7;
+        color: #fff;
+      }
+      .btn.primary:hover {
+        background: #5b4bdf;
+      }
+
+      /* ---------- FOOTER ---------- */
+      .tagline {
+        color: #8b7fd4;
+        font-size: 0.85rem;
+        text-align: center;
+        margin-top: 2px;
+      }
+      .pill {
+        display: block;
+        width: 100%;
+        padding: 10px 20px;
+        border: 2px solid #5b4fbd;
+        border-radius: 999px;
+        color: #a89ce6;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-align: center;
+        user-select: none;
+        letter-spacing: 0.3px;
+      }
+
+      /* ---------- SHAKE ---------- */
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        20% {
+          transform: translateX(-8px);
+        }
+        40% {
+          transform: translateX(8px);
+        }
+        60% {
+          transform: translateX(-5px);
+        }
+        80% {
+          transform: translateX(5px);
+        }
+      }
+      .board.shake {
+        animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+      }
+
+      @media (max-width: 360px) {
+        h1 {
+          font-size: 1.55rem;
+        }
+        .btn {
+          padding: 10px 14px;
+          font-size: 0.9rem;
+        }
+        .pill {
+          font-size: 0.85rem;
+          padding: 8px 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <h1>Sudoku Maven</h1>
+
+      <div class="board" id="board"></div>
+
+      <p id="status" class="status"></p>
+
+      <div class="controls">
+        <button id="solveBtn" class="btn primary" type="button">Solve</button>
+        <button id="clearBtn" class="btn" type="button">Clear</button>
+      </div>
+
+      <p class="tagline">free to play · no sign-up needed</p>
+      <div class="pill">sudokumaven.com</div>
+    </main>
+
+    <script>
+      (function () {
+        "use strict";
+
+        const CELLS = 81;
+        const FULL_MASK = 0x1ff;
+
+        const boardEl = document.getElementById("board");
+        const statusEl = document.getElementById("status");
+        const solveBtn = document.getElementById("solveBtn");
+        const clearBtn = document.getElementById("clearBtn");
+        const inputs = [];
+
+        /* ------------------------- SOLVER ------------------------- */
+        function solveSudoku(puzzle) {
+          const board = Int8Array.from(puzzle);
+          const rows = new Int16Array(9);
+          const cols = new Int16Array(9);
+          const boxes = new Int16Array(9);
+
+          for (let i = 0; i < CELLS; i++) {
+            const v = board[i];
+            if (v === 0) continue;
+            const r = (i / 9) | 0,
+              c = i % 9;
+            const b = ((r / 3) | 0) * 3 + ((c / 3) | 0);
+            const bit = 1 << (v - 1);
+            if ((rows[r] | cols[c] | boxes[b]) & bit) return null; // Conflict in clues
+            rows[r] |= bit;
+            cols[c] |= bit;
+            boxes[b] |= bit;
+          }
+
+          const POPCOUNT = new Uint8Array(512);
+          for (let m = 1; m < 512; m++)
+            POPCOUNT[m] = POPCOUNT[m >> 1] + (m & 1);
+
+          function search() {
+            let best = -1,
+              bestMask = 0,
+              bestCount = 10;
+
+            for (let i = 0; i < CELLS; i++) {
+              if (board[i] !== 0) continue;
+              const r = (i / 9) | 0,
+                c = i % 9;
+              const b = ((r / 3) | 0) * 3 + ((c / 3) | 0);
+              const mask = ~(rows[r] | cols[c] | boxes[b]) & FULL_MASK;
+              if (mask === 0) return false; // Dead end
+              const count = POPCOUNT[mask];
+              if (count < bestCount) {
+                bestCount = count;
+                best = i;
+                bestMask = mask;
+                if (count === 1) break;
+              }
+            }
+
+            if (best === -1) return true; // Solved
+
+            const r = (best / 9) | 0,
+              c = best % 9;
+            const b = ((r / 3) | 0) * 3 + ((c / 3) | 0);
+
+            let mask = bestMask;
+            while (mask !== 0) {
+              const bit = mask & -mask;
+              mask ^= bit;
+              const value = Math.log2(bit) + 1;
+
+              board[best] = value;
+              rows[r] |= bit;
+              cols[c] |= bit;
+              boxes[b] |= bit;
+
+              if (search()) return true;
+
+              // Undo
+              board[best] = 0;
+              rows[r] &= ~bit;
+              cols[c] &= ~bit;
+              boxes[b] &= ~bit;
+            }
+            return false;
+          }
+
+          return search() ? Array.from(board) : null;
+        }
+
+        /* --------------------------- UI --------------------------- */
+        function buildBoard() {
+          const frag = document.createDocumentFragment();
+          for (let i = 0; i < CELLS; i++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            const input = document.createElement("input");
+            input.type = "text";
+            input.inputMode = "numeric";
+            input.autocomplete = "off";
+            input.spellcheck = false;
+            input.maxLength = 1;
+            input.dataset.index = i;
+            input.setAttribute(
+              "aria-label",
+              "Row " + (Math.floor(i / 9) + 1) + ", Column " + ((i % 9) + 1),
+            );
+
+            cell.appendChild(input);
+            frag.appendChild(cell);
+            inputs.push(input);
+          }
+          boardEl.appendChild(frag);
+        }
+
+        function readPuzzle() {
+          return inputs.map((inp) => {
+            const v = parseInt(inp.value, 10);
+            return v >= 1 && v <= 9 ? v : 0;
+          });
+        }
+
+        function clearSolvedMarks() {
+          inputs.forEach((inp) => {
+            if (inp.classList.contains("solved")) {
+              inp.value = "";
+              inp.classList.remove("solved");
+            }
+          });
+        }
+
+        function shakeBoard() {
+          boardEl.classList.remove("shake");
+          void boardEl.offsetWidth;
+          boardEl.classList.add("shake");
+        }
+
+        function handleSolve() {
+          const puzzle = readPuzzle();
+          const empties = [];
+          puzzle.forEach((v, i) => {
+            if (v === 0) empties.push(i);
+          });
+
+          const solution = solveSudoku(puzzle);
+
+          if (!solution) {
+            clearSolvedMarks();
+            statusEl.textContent = "Unsolvable";
+            statusEl.className = "status";
+            shakeBoard();
+            return;
+          }
+
+          empties.forEach((i) => {
+            inputs[i].value = solution[i];
+            inputs[i].classList.add("solved");
+          });
+          statusEl.textContent = "Solved!";
+          statusEl.className = "status success";
+        }
+
+        function handleClear() {
+          inputs.forEach((inp) => {
+            inp.value = "";
+            inp.classList.remove("solved");
+          });
+          statusEl.textContent = "";
+          statusEl.className = "status";
+          boardEl.classList.remove("shake");
+          inputs[0].focus();
+        }
+
+        /* ----------------------- EVENTS ------------------------ */
+        boardEl.addEventListener("input", (e) => {
+          const inp = e.target;
+          if (!(inp instanceof HTMLInputElement)) return;
+          inp.value = inp.value.replace(/[^1-9]/g, "").slice(-1);
+          inp.classList.remove("solved");
+          statusEl.textContent = "";
+          statusEl.className = "status";
+        });
+
+        boardEl.addEventListener("keydown", (e) => {
+          const inp = e.target;
+          if (!(inp instanceof HTMLInputElement)) return;
+          const i = Number(inp.dataset.index);
+          const col = i % 9;
+          let t = -1;
+
+          switch (e.key) {
+            case "ArrowUp":
+              t = i - 9;
+              break;
+            case "ArrowDown":
+              t = i + 9;
+              break;
+            case "ArrowLeft":
+              if (col > 0) t = i - 1;
+              break;
+            case "ArrowRight":
+              if (col < 8) t = i + 1;
+              break;
+            case "Backspace":
+            case "Delete":
+              e.preventDefault();
+              inp.value = "";
+              inp.classList.remove("solved");
+              return;
+            case "Enter":
+              e.preventDefault();
+              handleSolve();
+              return;
+            default:
+              return;
+          }
+
+          if (t >= 0 && t < CELLS) {
+            e.preventDefault();
+            inputs[t].focus();
+            inputs[t].select();
+          }
+        });
+
+        solveBtn.addEventListener("click", handleSolve);
+        clearBtn.addEventListener("click", handleClear);
+
+        /* ------------------------- INIT ------------------------- */
+        buildBoard();
+
+        // Load a sample puzzle so the grid isn't empty on first open
+        const SAMPLE =
+          "050490200300000000180203905463017892590804003070069000040900100610008000930100586";
+        for (let i = 0; i < CELLS; i++) {
+          const c = SAMPLE[i];
+          if (c && c !== "0") inputs[i].value = c;
+        }
+        inputs[0].focus();
+      })();
+    </script>
+  </body>
+</html>
